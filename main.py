@@ -63,7 +63,7 @@ class MyVector(VGroup):
         self.index_step = index_step
         self.index_dir = index_dir
 
-        self.dir_right = dir_right
+        self.dir_right = RIGHT if dir_right else UP
         self.font_size = font_size
         self.index_font_size = font_size * 0.7
         self.buff = buff
@@ -81,12 +81,12 @@ class MyVector(VGroup):
                 )
             )
 
-        self.arrange(RIGHT, buff=buff)
+        self.arrange(self.dir_right, buff=buff)
 
 
 class Test(Scene):
     def construct(self):
         data = [1, 2, 3, 4, 5]
-        vec = MyVector(data=data)
+        vec = MyVector(data=data, dir_right=False, index_dir=LEFT)
         self.play(Write(vec))
         self.wait(2)
