@@ -35,12 +35,58 @@ class MyNode(VGroup):
         self[1].become(new_text)
 
 
+class MyVector(VGroup):
+    def __init__(
+        self,
+        data=None,
+        width=0.6,
+        height=0.6,
+        index=True,
+        index_from=0,
+        index_step=1,
+        index_dir=UP,
+        dir_right=True,
+        font_size=22,
+        buff=0,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+
+        self.data = [] if data is None else data
+        self.len = len(self.data)
+
+        self.width = width
+        self.height = height
+
+        self.index = index
+        self.index_from = index_from
+        self.index_step = index_step
+        self.index_dir = index_dir
+
+        self.dir_right = dir_right
+        self.font_size = font_size
+        self.index_font_size = font_size * 0.7
+        self.buff = buff
+
+        indices = range(index_from, index_from + self.len * index_step, index_step)
+        for text, idx in zip(self.data, indices):
+            self.add(
+                MyNode(
+                    text,
+                    width=width,
+                    height=height,
+                    label=index,
+                    label_text=idx,
+                    label_dir=index_dir,
+                )
+            )
+
+        self.arrange(RIGHT, buff=buff)
+
+
 class Test(Scene):
     def construct(self):
         data = [1, 2, 3, 4, 5]
-        nodes = VGroup(*[MyNode(x, label=False) for i, x in enumerate(data)]).arrange(
-            RIGHT, buff=0
-        )
-        self.play(Write(nodes))
-
+        vec = MyVector(data=data)
+        self.play(Write(vec))
         self.wait(2)
