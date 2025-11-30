@@ -95,7 +95,9 @@ class MyVector(VGroup):
         for idx, txt in zip(range(start, end), text):
             self[idx].set_text(txt)
 
-    def focus(self, start, end, color=GREEN, buff=0.1):
+    def focus(self, start=None, end=None, color=GREEN, buff=0.1):
+        start = 0 if start is None else start
+        end = self.len if end is None else end
         group = VGroup(self[x][0] for x in range(start, end))
         rect = (
             SurroundingRectangle(group, buff=buff)
