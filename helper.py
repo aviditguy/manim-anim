@@ -85,7 +85,10 @@ class MyVector(VGroup):
 
     def set_text(self, start=0, end=None, text=None):
         end = self.len if end is None else end
-        text = self.data[start:end] if text is None else text
+        if text is None:
+            text = self.data[start:end]
+        else:
+            text = list(text)
 
         self.data[start:end] = text
         
@@ -118,24 +121,18 @@ class MyVector(VGroup):
 
         self.data[fromx], self.data[tox] = self.data[tox], self.data[fromx]
         self.set_text()
-        # self[swap_from].set_text(self.data[swap_to])
-        # self[swap_to].set_text(self.data[swap_from])
 
     def shift_left(self, scene, shift_by=1, fill=" "):
-        texts = VGroup(*[self[x][1] for x in range(self.len)])
+        new_values = self.data[shift_by:] + [fill] * shift_by
+        texts = VGroup(*[self[i][1] for i in range(self.len)])
         scene.play(
-            FadeOut(texts[:shift_by]),
-            texts[shift_by:].animate.shift(LEFT * self.cell_width * shift_by),
+            texts.animate.shift(LEFT * self.cell_width*shift_by),
+            run_time=1
         )
-
-        new_values = self.data[shift_by:] + ([fill] * shift_by)
-        for i, x in enumerate(new_values):
-            self.data[i] = x
-            self[i].set_text(x)
-            scene.play(FadeIn(self[i][1]), run_time=0.01)
-        print(new_values)
-        print(self.data)
-
+        self.data = new_values
+        self.set_text()
+        
+    
 
 class Test(Scene):
     def construct(self):
@@ -145,11 +142,11 @@ class Test(Scene):
         self.wait(1)
 
         # self.play(vec[2][1].animate.shift(LEFT*0.6*2))
-        # vec.shift_left(self, 3, fill=0)
-        # self.wait(1)
-
-        vec.swap(self, 1, 4)
+        vec.shift_left(self, 3, fill=0)
         self.wait(1)
 
-        self.play(vec[4].animate.to_edge(UP))
+        # vec.swap(self, 1, 4)
+        # self.wait(1)
+
+        # self.play(vec[4].animate.to_edge(UP))
         self.wait(1)
