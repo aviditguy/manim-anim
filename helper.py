@@ -83,9 +83,14 @@ class MyVector(VGroup):
 
         self.arrange(self.dir_right, buff=buff)
 
-    def set_text(self, index=0, text=" "):
-        self.data[index] = text
-        self[index].set_text(text)
+    def set_text(self, start=0, end=None, text=None):
+        end = self.len if end is None else end
+        text = self.data[start:end] if text is None else text
+
+        self.data[start:end] = text
+        
+        for idx, txt in zip(range(start,end), text):
+            self[idx].set_text(txt)
 
     def focus(self, start, end, color=GREEN, buff=0.1):
         group = VGroup(self[x][0] for x in range(start, end))
@@ -96,27 +101,25 @@ class MyVector(VGroup):
         )
         return rect
 
-    def swap(self, scene, swap_from, swap_to):
-        if swap_from == swap_to:
+    def swap(self, scene, fromx, tox):
+        if fromx == tox:
             return
 
-        start_pos = self[swap_from][0].get_center()
-        end_pos = self[swap_to][0].get_center()
+        start_pos = self[fromx][0].get_center()
+        end_pos = self[tox][0].get_center()
 
         arcup = ArcBetweenPoints(start_pos, end_pos, angle=-PI)
         arcdwn = ArcBetweenPoints(end_pos, start_pos, angle=-PI)
 
         scene.play(
-            MoveAlongPath(self[swap_from][1], arcup),
-            MoveAlongPath(self[swap_to][1], arcdwn),
+            MoveAlongPath(self[fromx][1], arcup),
+            MoveAlongPath(self[tox][1], arcdwn),
         )
 
-        self[swap_from].set_text(self.data[swap_to])
-        self[swap_to].set_text(self.data[swap_from])
-        self.data[swap_from], self.data[swap_to] = (
-            self.data[swap_to],
-            self.data[swap_from],
-        )
+        self.data[fromx], self.data[tox] = self.data[tox], self.data[fromx]
+        self.set_text()
+        # self[swap_from].set_text(self.data[swap_to])
+        # self[swap_to].set_text(self.data[swap_from])
 
     def shift_left(self, scene, shift_by=1, fill=" "):
         texts = VGroup(*[self[x][1] for x in range(self.len)])
@@ -142,11 +145,11 @@ class Test(Scene):
         self.wait(1)
 
         # self.play(vec[2][1].animate.shift(LEFT*0.6*2))
-        vec.shift_left(self, 3, fill=0)
-        self.wait(1)
-
-        # vec.swap(self, 1, 4)
+        # vec.shift_left(self, 3, fill=0)
         # self.wait(1)
+
+        vec.swap(self, 1, 4)
+        self.wait(1)
 
         self.play(vec[4].animate.to_edge(UP))
         self.wait(1)
