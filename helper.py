@@ -55,8 +55,8 @@ class MyVector(VGroup):
         self.data = [] if data is None else data
         self.len = len(self.data)
 
-        self.width = width
-        self.height = height
+        self.cell_width = width
+        self.cell_height = height
 
         self.index = index
         self.index_from = index_from
@@ -86,7 +86,7 @@ class MyVector(VGroup):
     def set_text(self, index=0, text=" "):
         self.data[index] = text
         self[index].set_text(text)
-        
+
     def focus(self, start, end, color=GREEN, buff=0.1):
         group = VGroup(self[x][0] for x in range(start, end))
         rect = (
@@ -118,6 +118,21 @@ class MyVector(VGroup):
             self.data[swap_from],
         )
 
+    def shift_left(self, scene, shift_by=1, fill=" "):
+        texts = VGroup(*[self[x][1] for x in range(self.len)])
+        scene.play(
+            FadeOut(texts[:shift_by]),
+            texts[shift_by:].animate.shift(LEFT * self.cell_width * shift_by),
+        )
+
+        new_values = self.data[shift_by:] + ([fill] * shift_by)
+        for i, x in enumerate(new_values):
+            self.data[i] = x
+            self[i].set_text(x)
+            scene.play(FadeIn(self[i][1]), run_time=0.01)
+        print(new_values)
+        print(self.data)
+
 
 class Test(Scene):
     def construct(self):
@@ -126,11 +141,12 @@ class Test(Scene):
         self.play(Write(vec))
         self.wait(1)
 
-        vec.set_text(1, 10)
-        
-        vec.swap(self, 1, 4)
+        # self.play(vec[2][1].animate.shift(LEFT*0.6*2))
+        vec.shift_left(self, 3, fill=0)
         self.wait(1)
+
+        # vec.swap(self, 1, 4)
+        # self.wait(1)
 
         self.play(vec[4].animate.to_edge(UP))
         self.wait(1)
-        
