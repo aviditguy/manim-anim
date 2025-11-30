@@ -83,12 +83,6 @@ class MyVector(VGroup):
 
         self.arrange(self.dir_right, buff=buff)
 
-    def set_text(self, *cells, texts=None, fill=" "):
-        texts = texts or []
-        texts += [fill] * (len(cells) - len(texts))
-
-        for cell, text in zip(cells, texts):
-            self[cell].set_text(text)
 
 
 class Test(Scene):
@@ -98,8 +92,7 @@ class Test(Scene):
         self.play(Write(vec))
         self.wait(1)
 
-        vec.set_text(1,2,texts=['a', 'b'])
-        self.wait(2)
-
+        vec[1].set_text("a")
+        self.wait(1)
         self.play(vec[1].animate.to_edge(UP))
         self.wait(2)
