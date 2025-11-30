@@ -91,8 +91,8 @@ class MyVector(VGroup):
             text = list(text)
 
         self.data[start:end] = text
-        
-        for idx, txt in zip(range(start,end), text):
+
+        for idx, txt in zip(range(start, end), text):
             self[idx].set_text(txt)
 
     def focus(self, start, end, color=GREEN, buff=0.1):
@@ -125,14 +125,17 @@ class MyVector(VGroup):
     def shift_left(self, scene, shift_by=1, fill=" "):
         new_values = self.data[shift_by:] + [fill] * shift_by
         texts = VGroup(*[self[i][1] for i in range(self.len)])
-        scene.play(
-            texts.animate.shift(LEFT * self.cell_width*shift_by),
-            run_time=1
-        )
+        scene.play(texts.animate.shift(LEFT * self.cell_width * shift_by), run_time=1)
         self.data = new_values
         self.set_text()
-        
-    
+
+    def shift_right(self, scene, shift_by=1, fill=" "):
+        new_values = [fill] * shift_by + self.data[:shift_by]
+        texts = VGroup(*[self[i][1] for i in range(self.len)])
+        scene.play(texts.animate.shift(RIGHT * self.cell_width * shift_by), run_time=1)
+        self.data = new_values
+        self.set_text()
+
 
 class Test(Scene):
     def construct(self):
@@ -145,8 +148,11 @@ class Test(Scene):
         vec.shift_left(self, 3, fill=0)
         self.wait(1)
 
+        vec.shift_right(self, 3, fill=1)
+        self.wait(1)
+
         # vec.swap(self, 1, 4)
         # self.wait(1)
 
-        # self.play(vec[4].animate.to_edge(UP))
+        self.play(vec[4].animate.to_edge(UP))
         self.wait(1)
