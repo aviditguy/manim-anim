@@ -27,9 +27,9 @@ class MyNode(VGroup):
         else:
             self.add(node_el, text_el)
 
-    def set_text(self, text=None):
+    def set_text(self, text=None, font_size=22):
         text = " " if None else text
-        new_text = Text(str(text), font_size=self[1].font_size).move_to(
+        new_text = Text(str(text), font_size=font_size).move_to(
             self[0].get_center()
         )
         self[1].become(new_text)
@@ -85,15 +85,12 @@ class MyVector(VGroup):
 
     def set_text(self, start=0, end=None, text=None):
         end = self.len if end is None else end
-        if text is None:
-            text = self.data[start:end]
-        else:
-            text = list(text)
+        text = self.data[start:end] if text is None else text
 
         self.data[start:end] = text
 
         for idx, txt in zip(range(start, end), text):
-            self[idx].set_text(txt)
+            self[idx].set_text(txt, self.font_size)
 
     def focus(self, start=None, end=None, color=GREEN, buff=0.1):
         start = 0 if start is None else start
