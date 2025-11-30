@@ -136,6 +136,32 @@ class MyVector(VGroup):
         self.data = new_values
         self.set_text()
 
+    def swap_and_shift(self, scene, fromx, tox):
+        if fromx == tox:
+            return
+
+        step = 1 if fromx < tox else -1
+        arc_angle = -PI
+        shift_dir = LEFT if fromx < tox else RIGHT
+
+        key = self.data[fromx]
+        new_values = self.data
+
+        new_values[fromx:] = new_values[fromx + 1 :]
+        new_values.insert(tox, key)
+
+        arc = ArcBetweenPoints(
+            self[fromx][0].get_center(), self[tox][0].get_center(), angle=arc_angle
+        )
+
+        texts = VGroup(*[self[x][1] for x in range(fromx+step, tox + step, step)])
+        scene.play(
+            MoveAlongPath(self[fromx][1], arc),
+            texts.animate.shift(shift_dir * self.cell_width),
+        )
+        self.data = new_values
+        self.set_text()
+
 
 class Test(Scene):
     def construct(self):
@@ -144,15 +170,18 @@ class Test(Scene):
         self.play(Write(vec))
         self.wait(1)
 
-        # self.play(vec[2][1].animate.shift(LEFT*0.6*2))
-        vec.shift_left(self, 3, fill=0)
-        self.wait(1)
+        vec.swap_and_shift(self, 1, 3)
+        vec.swap_and_shift(self, 3, 1)
 
-        vec.shift_right(self, 3, fill=1)
-        self.wait(1)
+        # self.play(vec[2][1].animate.shift(LEFT*0.6*2))
+        # vec.shift_left(self, 3, fill=0)
+        # self.wait(1)
+
+        # vec.shift_right(self, 3, fill=1)
+        # self.wait(1)
 
         # vec.swap(self, 1, 4)
         # self.wait(1)
 
-        self.play(vec[4].animate.to_edge(UP))
+        # self.play(vec[4].animate.to_edge(UP))
         self.wait(1)
