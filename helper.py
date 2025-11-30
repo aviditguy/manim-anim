@@ -83,6 +83,10 @@ class MyVector(VGroup):
 
         self.arrange(self.dir_right, buff=buff)
 
+    def set_text(self, index=0, text=" "):
+        self.data[index] = text
+        self[index].set_text(text)
+        
     def focus(self, start, end, color=GREEN, buff=0.1):
         group = VGroup(self[x][0] for x in range(start, end))
         rect = (
@@ -122,9 +126,11 @@ class Test(Scene):
         self.play(Write(vec))
         self.wait(1)
 
+        vec.set_text(1, 10)
+        
         vec.swap(self, 1, 4)
         self.wait(1)
 
-        self.play(vec[1].animate.to_edge(UP))
+        self.play(vec[4].animate.to_edge(UP))
         self.wait(1)
         
