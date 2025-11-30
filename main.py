@@ -92,6 +92,28 @@ class MyVector(VGroup):
         )
         return rect
 
+    def swap(self, scene, swap_from, swap_to):
+        if swap_from == swap_to:
+            return
+
+        start_pos = self[swap_from][0].get_center()
+        end_pos = self[swap_to][0].get_center()
+
+        arcup = ArcBetweenPoints(start_pos, end_pos, angle=-PI)
+        arcdwn = ArcBetweenPoints(end_pos, start_pos, angle=-PI)
+
+        scene.play(
+            MoveAlongPath(self[swap_from][1], arcup),
+            MoveAlongPath(self[swap_to][1], arcdwn),
+        )
+
+        self[swap_from].set_text(self.data[swap_to])
+        self[swap_to].set_text(self.data[swap_from])
+        self.data[swap_from], self.data[swap_to] = (
+            self.data[swap_to],
+            self.data[swap_from],
+        )
+
 
 class Test(Scene):
     def construct(self):
@@ -100,9 +122,9 @@ class Test(Scene):
         self.play(Write(vec))
         self.wait(1)
 
-        vec[1].set_text("a")
+        vec.swap(self, 1, 4)
         self.wait(1)
 
-        focus = vec.focus(1, 4)
-        self.play(Write(focus))
+        self.play(vec[1].animate.to_edge(UP))
         self.wait(1)
+        
