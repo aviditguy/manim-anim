@@ -83,6 +83,14 @@ class MyVector(VGroup):
 
         self.arrange(self.dir_right, buff=buff)
 
+    def focus(self, start, end, color=GREEN, buff=0.1):
+        group = VGroup(self[x][0] for x in range(start, end))
+        rect = (
+            SurroundingRectangle(group, buff=buff)
+            .set_fill(color, opacity=0.3)
+            .set_stroke(color, width=2)
+        )
+        return rect
 
 
 class Test(Scene):
@@ -94,5 +102,7 @@ class Test(Scene):
 
         vec[1].set_text("a")
         self.wait(1)
-        self.play(vec[1].animate.to_edge(UP))
-        self.wait(2)
+
+        focus = vec.focus(1, 4)
+        self.play(Write(focus))
+        self.wait(1)
