@@ -134,7 +134,7 @@ class MyVector(VGroup):
         texts = VGroup(*[self[i][1] for i in range(self.len)])
         scene.play(texts.animate.shift(RIGHT * self.cell_width * shift_by), run_time=1)
         self.data = new_values
-        self.set_text()
+        self.set_text()        
 
     def swap_and_shift(self, scene, fromx, tox):
         if fromx == tox:
@@ -163,25 +163,3 @@ class MyVector(VGroup):
         self.set_text()
 
 
-class Test(Scene):
-    def construct(self):
-        data = [1, 2, 3, 4, 5]
-        vec = MyVector(data=data)
-        self.play(Write(vec))
-        self.wait(1)
-
-        vec.swap_and_shift(self, 1, 3)
-        vec.swap_and_shift(self, 3, 1)
-
-        # self.play(vec[2][1].animate.shift(LEFT*0.6*2))
-        # vec.shift_left(self, 3, fill=0)
-        # self.wait(1)
-
-        # vec.shift_right(self, 3, fill=1)
-        # self.wait(1)
-
-        # vec.swap(self, 1, 4)
-        # self.wait(1)
-
-        # self.play(vec[4].animate.to_edge(UP))
-        self.wait(1)
