@@ -1,0 +1,750 @@
+
+
+*(interactive)* se kya hota hai?
+Function ko hum normal lisp code ke alawa emacs se ~M-x function-name~ se bhi call kar sakte hai.
+
+#+begin_src emacs-lisp
+(defun my/say-hello ()
+  (message "Hello from emacs"))
+
+(my/say-hello)
+;; M-x my/say-hello-inter ❌ command nahi hai
+
+(defun my/say-hello-inter ()
+  (interactive)
+  (message "Hello interactively from emacs"))
+
+(my/say-hello-inter)
+;; M-x my/say-hello-inter ✅
+#+end_src
+
+
+*save-excursion* se kya hota hai?
+Ye do cheeze save karta hai: *current buffer* aur usme *cursor position (point)*
+
+1. Pehla example bina *save-excursion* ke dekhte hai hum move karenge cursor ko beginning of file pe
+#+begin_src emacs-lisp
+(defun my/goto-min ()
+  (goto-char (point-min))
+  (message "cursor moved to beginning"))
+
+(my/goto-min)
+#+end_src
+
+2. Is me same function par ab *save-excursion* ko use karenge
+#+begin_src emacs-lisp
+(defun my/goto-min ()
+  (save-excursion
+    (goto-char (point-min))
+    (message "cursor moved to beginning"))
+  (message "cursor position restored"))
+
+(my/goto-min)
+#+end_src
+
+
+*save-mark-and-excursion* kya karta hai?
+Ye kya save karta hai:
+- current buffer
+- cursor position (point)
+- mark (selection/region)
+  
+📌 Difference:
+#+begin_src
+save-excursion          → point + buffer
+save-mark-and-excursion → point + buffer + mark
+#+end_src
+
+1. Simple example dekhte hai pehle *save-excursion* ki problem dekhte hai. Isko chalane ka rule simple hai ek *region select karo aur phir function kare*
+#+begin_src emacs-lisp
+(defun mark-no-save ()
+  (interactive)
+  (save-excursion
+    (set-mark (point))
+    (forward-word 3)))
+#+end_src
+👉 Cursor wapas aa jaata hai
+👉 Mark change ho chuka hota hai ❌
+
+2. Ab *save-mark-and-excursion* ke saath dekhte hai.
+#+begin_src emacs-lisp
+(defun mark-save ()
+  (interactive)
+  (save-mark-and-excursion
+    (set-mark (point))
+    (forward-word 3)))
+#+end_src
+👉 Cursor same
+👉 Region same
+👉 User ko kuch feel nahi hota ✅
+
+*save-window-excursion* kya karta hai?
+ye *window layout* me teen cheeze save karta hai:
+- window splits
+- selected window
+- buffers show in windows (konsa buffer kis window me hai)
+
+1. Pehla example bina *save-window-excursion* ke isme hum bottom split karenge aur usme *scratch* buffer kholte hai.
+#+begin_src emacs-lisp
+(defun my/win-no-save ()
+  (split-window-below)
+  (other-window 1)
+  (switch-to-buffer "*scratch*"))
+
+(my/win-no-save)
+#+end_src
+👉 Split permanent ho gaya ❌
+
+2. Isme hum *save-window-excursion* use karenge
+#+begin_src emacs-lisp
+(defun my/win-no-save ()
+  (save-window-excursion
+    (split-window-below)
+    (other-window 1)
+    (switch-to-buffer "*scratch*")))
+
+(my/win-no-save)
+#+end_src
+👉 Split temporary, baad me restore ✅
+
+
+* Basic terms
+
+** Point
+- Cursor ki current position
+#+begin_src emacs-lisp
+(point)
+#+end_src
+
+- *Point*    → Cursor ki current position *(point)*
+- *Mark*     → Selection ka starting point. *(mark)* mark ki position. Mark invisible hota hai.
+- *Region*   → *Point + Mark* ke beech ka area. Actual selected text.
+
+
+* Region kab active hota hai?
+Region tab active hota hai jab:
+- mark set ho
+- aur *Transient Mark Mode* enabled ho
+Check:
+#+begin_src emacs-lisp
+(transient-mark-mode)
+#+end_src
+Default: ✅ ON
+
+* Common user actions
+| *Action*              | *Key*       |
+|-----------------------+-------------|
+| Set mark              | *C-Spc*     |
+| Expand selection      | Move cursor |
+| Cancel selection      | *C-g*       |
+| Exchange point & mark | *C-x C-x*   |
+
+
+- *(use-region-p)*          → Check if region is active, Returns *t* or *nil*
+- *(region-beginning)*      → Returns start of region boundary
+- *(region-end)*            → End of region boundary
+- *(set-mark (point))*      → Mark set karta hai, Region active nahi karta (by default)
+- *(push-mark (point) t t)* → Arguments: (push-mark position activate-region push-to-mark-ring)
+- *(deactivate-mark)*       → Deactivating region, Useful jab command ke baad selection nahi chahiye
+
+* Mark ring (history of marks)
+- Emacs multiple marks yaad rakhta hai
+- Navigation:
+  - *C-u C-Spc*       Previous mark
+  - *C-u C-u C-Spc*   Older mark
+
+- *(buffer-string)*
+  - Poore current buffer ka text string ke roop me return karta hai
+
+- *(buffer-substring (region-beginning) (region-end))*
+  - Getting region text with properties
+
+- *(buffer-substring-no-properties (region-beginning) (region-end))*
+  - Getting region text without properties (recommended)
+
+- *(delete-region (region-beginning) (region-end))*
+  - Delete region
+
+- *(thing-at-point 'line)*
+- *(thing-at-point 'word)*
+- *(thing-at-point 'symbol)*
+  - Returns the current line, word or symbol at point
+
+#+begin_src emacs-lisp
+(defun my/get-line ()
+  (interactive)
+  (message "%s" (thing-at-point 'line t)))
+#+end_src  
+      
+
+Ek simple function likhte hai jo ki current line ko duplicate karega
+#+begin_src emacs-lisp
+(defun my/duplicate-line ()
+  "Duplicate current line"
+  (interactive)
+  (let* ((beg  (line-beginning-position))
+         (end  (line-end-position))
+         (line (buffer-substring-no-properties beg end)))
+    (goto-char end)
+    (newline)
+    (insert line)))  
+#+end_src
+
+Isi function ko thoda aur modify karte hai ki agar koi region selected hai to region ko duplicate nahi to line duplicate karo
+#+begin_src emacs-lisp
+(defun my/duplicate-line-or-region ()
+  "Duplicate current line or region"
+  (interactive)
+  (if (use-region-p)
+      ;; ---------- REGION CASE ----------
+      (let ((text (buffer-substring-no-properties
+		   (region-beginning)
+		   (region-end))))
+	(goto-char (region-end))
+	(insert text))
+    ;; ---------- LINE CASE ----------
+    (let* ((beg  (line-beginning-position))
+	   (end  (line-end-position))
+	   (line (buffer-substring-no-properties beg end)))
+      (goto-char end)
+      (newline)
+      (insert line))))
+#+end_src
+
+to region me ek samasya hai ki region deselect ho raha hai jabki hum *save-make-and-excursion* use kar rahe hai jo kehta hai:
+- *point + mark* wapas lao
+
+lekin:
+- hum region ke andar buffer modify kar rahe hai *(insert text)*
+- Emacs internally *deactivate-mark* trigger kar deta hai
+- Result:
+  - region logically restore hota hai
+  - *par visually inactivate ho jata hai*
+
+To isko fix karne ke liye hum 3 cheeze karenge:
+1. Region boundaries save karo
+2. Edit karo
+3. Region *dubara activate* karo
+
+Ek aur bohot important cheez hai *deactivate-mark*, ye emacs ka ek variable hai.
+Kisi bhi editing command ke baad Emacs internally karta hai: *(setq deactivate-mark t)*
+To hame isko bhi *nil* set karna hoga nahi to *region restore hone ke baad bhi deactivate ho jaayega*
+
+#+begin_src emacs-lisp
+(defun my/duplicate-line-or-region ()
+  "Duplicate current line or region"
+  (interactive)
+  (if (use-region-p)
+      ;; ---------- REGION CASE ----------
+      (let* ((beg  (region-beginning))
+	    (end   (region-end))
+	    (text  (buffer-substring-no-properties beg end)))
+	(goto-char end)
+	(insert text)
+	;; restore visible region
+	(goto-char beg)
+	(push-mark end t t)
+	(setq deactivate-mark nil))
+    ;; ---------- LINE CASE ----------
+    (let* ((beg  (line-beginning-position))
+	   (end  (line-end-position))
+	   (line (buffer-substring-no-properties beg end)))
+      (goto-char end)
+      (newline)
+      (insert line))))
+#+end_src
+
+
+
+
+
+
+
+*set-transient-map*
+- Temporary keymap install karta hai
+- Jab tak valid key dabate rah → active
+- *C-g* ya unknown key → auto exit
+
+Ye exactly: *"chhota modal behavior"* ke liye bana hai.
+
+
+* *(interactive "CODE")* arguments kaise leta hai?
+Ye *"CODE"* ek *mini language* hai jo Emacs ko batata hai:
+- kaunsa input lena hai
+- kaise convert karna hai
+
+Sabse common interactive codes
+| *Code* | *Matlab*           |   | *Code* | *Matlab*           |
+|--------+--------------------+---+--------+--------------------|
+| *s*    | String             |   | *n*    | Number             |
+| *p*    | Prefix argument    |   | *r*    | Region (start end) |
+| *b*    | Buffer name        |   | *f*    | Exisiting file     |
+| *F*    | File (new allowed) |   | *c*    | Character          |
+| *k*    | Key sequence       |   |        |                    |
+
+* String argument example (*s*)
+#+begin_src emacs-lisp
+(defun my/echo (msg)
+  (interactive "sMessage: ")
+  (message "You typed: %s" msg))
+#+end_src
+
+* Number argument (*n*)
+#+begin_src emacs-lisp
+(defun my/square (n)
+  (interactive "nNumber: ")
+  (message "Square = %d" (* n n)))
+#+end_src
+
+* Prefix argument (*p*)
+#+begin_src emacs-lisp
+(defun my/repeat-line (n)
+  (interactive "p")
+  (dotimes (_ n)
+    (message "%s" (thing-at-point 'line t))))
+#+end_src
+Use:
+- *M-x my/repeat-line*     → 1 time
+- *C-3 M-x my/repeat-line* → 3 times
+
+* Region arguments (*r*)
+#+begin_src emacs-lisp
+(defun my/region-info (start end)
+  (interactive "r")
+  (if (use-region-p)
+      (message "%s"
+	       (buffer-substring-no-properties start end))))
+#+end_src
+
+* Multiple arguments ek saath
+#+begin_src emacs-lisp
+(defun my/replace-region (start end text)
+  (interactive "r\nsReplace with: ")
+  (if (use-region-p)
+      (progn
+	(delete-region start end)
+	(insert text))
+    (message "No region selected")))  
+#+end_src
+
+* Buffer argument (*b*)
+#+begin_src emacs-lisp
+(defun my/switch (buf)
+  (interactive "bBuffer name: ")
+  (switch-to-buffer buf))
+#+end_src
+
+* File argument (*f* vs *F*)
+#+begin_src emacs-lisp
+(defun my/open (file)
+  (interactive "fOpen file: ")
+  (find-file file))
+
+(defun my/create (file)
+  (interactive "FCreate file: ")
+  (find-file file))
+#+end_src
+
+* Character input (*c*)
+#+begin_src emacs-lisp
+(defun my/char-info (ch)
+  (interactive "cEnter char: ")
+  (message "Char: %c Code: %d" ch ch))
+#+end_src
+
+* Key sequence (*k*)
+#+begin_src emacs-lisp
+(defun my/key-info (key)
+  (interactive "kPress key: ")
+  (message "Key: %s" (key-description key)))
+#+end_src
+
+
+
+
+
+- *Frame* = OS window
+- *Window* = Frame ke andar split panes
+- *Buffer* = actual content (file / shell / help)
+
+  *Ek buffer ko multiple windows me dikha sakte ho*
+
+1. Window split karna
+  - horizontal split (top-bottom): *C-x 2 → (split-window-below)*
+  - vertical split (left-right):   *C-x 3 → (split-window-right)*
+#+begin_src emacs-lisp
+(split-window)
+(split-window-right)
+(split-window-below)
+(split-window nil -20 'below)
+(split-window (selected-window) -100 'right)
+#+end_src
+
+2. Window move karna: *C-x o → (other-window 1)*
+
+3. Window close/reset
+   - Current window close: *C-x 0 → (delete-window)*
+   - All except current  : *C-x 1 → (delete-other-windows)*
+   - Balance window      : *C-x + → (balance-windows)*
+
+
+4. Window resize
+   - *C-x }   → wider*
+   - *C-x {   → narrower*
+   - *C-x ^   → taller*
+     
+#+begin_src emacs-lisp
+(enlarge-window 5)     ;; height
+(shrink-window 5)
+
+(enlarge-window-horizontally 5)
+(shrink-window-horizontally 5)
+#+end_src
+
+5. Buffer switching
+   - Next buffer      : *C-x <right> → (next-buffer)*
+   - Previous buffer  : *C-x <left>  → (previous-buffer)* 
+   - Switch to buffer by name : *C-x b → (switch-to-buffer "main.c")*
+   - Recent buffers   : *C-x C-b → (ibuffer)*
+
+
+6. Buffer vs Window
+#+begin_src emacs-lisp
+(current-buffer)
+(window-buffer)
+
+;; Set buffer in window
+(set-window-buffer (selected-window) "*scratch*")
+#+end_src
+
+
+
+
+
+
+
+* Terminal toggle system Emacs me?
+Goal:
+Ek *single persistent terminal* banana jo
+- background me create ho
+- bottom / right me toggle ho
+- window delete hone par buffer alive rahe
+  
+** 1 Global State + Helper Functions
+#+begin_src emacs-lisp
+(defvar my/term-state
+  '(:name "*my-terminal*"
+	  :active nil
+	  :below t)
+  "State for my terminal toggle system.")
+
+(defun my/term-name ()
+  "Helper function to get name from my/term-state"
+  (plist-get my/term-state :name))
+
+(defun my/term-active ()
+  "Helper function to extract active flag from my/term-state"
+  (plist-get my/term-state :active))
+
+(defun my/term-buffer ()
+  "Helper function to get the my/term-state :name buffer from buffer list"
+  (get-buffer (my/term-name)))
+
+(my/term-name)
+(my/term-active)
+(my/term-buffer)
+#+end_src
+🔹 State fields
+- *:name*   → terminal buffer ka identity
+- *:active* → terminal currently kisi window me visible hai ya nahi
+- *:below*  → split direction: *t* → bottom and *nil* → right
+
+** 2 Terminal Creation (Background)
+🔹 Goal:
+- Terminal sirf ek baar create ho
+- Window layout disturb na ho
+- Agar buffer already hai → kuch na karo
+  
+#+begin_src emacs-lisp
+(defun my/term-create ()
+  "Create ansi-term in backgrond if does not exists"
+  (unless (my/term-buffer)
+    (save-window-excursion
+      (let ((buf (ansi-term (getenv "SHELL"))))
+	(with-current-buffer buf
+	  (rename-buffer (my/term-name) t))))))
+
+(my/term-create)
+#+end_src
+🔹 Important Emacs Lesson
+- *ansi-term* hamesha naya buffer banata hai
+- Second argument *exact buffer name nahi hota*
+- Isliye:
+  - pehle create
+  - phir *rename-buffer* (force = *t*)
+
+** 3 Sow Terminal (Split Window)
+🔹 Goal
+- Terminal buffer ko window me dikhana
+- Bottom ya right — state ke hisaab se
+- Agar already active hai → kuch na karo
+  
+#+begin_src emacs-lisp
+(defun my/term-show ()
+  "Create and show terminal in split-window"
+  (my/term-create)
+  ;; only show if not already active
+  (unless (my/term-active)
+    (let ((win (if (plist-get my/term-state :below)
+		   (split-window-below -15)
+		 (split-window-right -100))))      
+      (set-window-buffer win (my/term-buffer))
+      (select-window win)
+      (setq my/term-state (plist-put my/term-state :active t)))))
+
+(my/term-show)
+#+end_src
+
+** 4 Hide Terminal (Window Delete)
+🔹 Goal
+- Terminal buffer ko kill nahi karna
+- Sirf window hataani hai
+
+#+begin_src emacs-lisp
+(defun my/term-hide ()
+  "Hide the terminal by deleting the split-window"
+  (when-let ((win (get-buffer-window (my/term-buffer))))
+    (delete-window win)
+    (setq my/term-state (plist-put my/term-state :active nil))))
+
+(my/term-hide)
+#+end_src
+*Important Concept*
+- *delete-window ≠ kill-buffer*
+- Terminal process background me alive rehta hai
+
+** 5 Toggle Command (Main Entry Point)
+🔹 Goal
+- Ek hi command:
+  - show
+  - hide
+  - create (if missing)
+
+#+begin_src emacs-lisp
+(defun my/term-toggle ()
+  "Toggle terminal if no terminal first create it and then show/hide"
+  (interactive)
+
+  (if (my/term-active)
+      (my/term-hide)
+    (my/term-show)))
+
+(my/term-toggle)
+#+end_src
+
+** 6 Toggle Position (Bottom ↔ Right)
+🔹 Goal
+- Runtime me terminal ka position change karna
+- Agar visible hai → re-render
+
+#+begin_src emacs-lisp
+(defun my/term-toggle-move ()
+  "Move terminal toggle from bottom <-> right"
+  (interactive)
+
+  (setq my/term-state
+	(plist-put my/term-state :below
+		   (not (plist-get my/term-state :below))))
+  
+  (if (my/term-active)
+      (progn
+	(my/term-hide)
+	(my/term-show))
+    (my/term-show)))
+
+(my/term-toggle-move)
+#+end_src
+
+** 7 Key Bindings
+#+begin_src emacs-lisp
+(global-set-key (kbd "C-`") #'my/term-toggle)
+(global-set-key (kbd "C-M-`") #'my/term-toggle-move)
+#+end_src
+
+
+
+* Theme Cycling System in Emacs
+🎯 Goal
+- Kuch selected themes ke beech cycle karna
+- Har key press par next theme load ho
+-Last theme ke baad phir se first theme se start ho
+
+** 1 Theme State
+Hum ek *plist (property list)* use kar rahe hain jisme:
+- *:themes* → themes ki list
+- *:index*  → current theme ka index
+#+begin_src emacs-lisp
+(defvar my/theme-state
+  '(:themes
+    (doom-material-dark
+     doom-1337
+     doom-dark+)
+    :index 0))
+#+end_src
+
+📌 *:index 0* ka matlab → pehla theme active hoga
+
+** 2 Helper Functions
+- *my/get-themes*         → Themes ki list nikalna
+- *my/get-theme-index*    → Current index nikalna
+- *my/get-current-theme*  → Current theme nikalna (index ke basis par)
+- *my/update-theme-index* → Theme index update (wrap around logic)
+
+#+begin_src emacs-lisp
+(defun my/get-themes ()
+  (plist-get my/theme-state :themes))
+
+(defun my/get-theme-index ()
+  (plist-get my/theme-state :index))
+
+(defun my/get-current-theme ()
+  (nth (my/get-theme-index)
+       (plist-get my/theme-state :themes)))
+
+;; Index ko `+1` karta hai
+;; agar last theme pe ho → `0` pe wapas laata hai
+(defun my/update-theme-index ()
+  (setq my/theme-state
+	(plist-put my/theme-state
+		   :index (mod (1+ (my/get-theme-index)) (length (my/get-themes))))))
+
+(my/get-themes)
+(my/get-theme-index)
+(my/get-current-theme)
+(my/update-theme-index)
+#+end_src
+
+** 3 Theme Cycle Command
+Ye main interactive command hai jo:
+- Sab enabled themes disable karta hai
+- Current theme load karta hai
+- Message show karta hai
+- Index update karta hai
+
+#+begin_src emacs-lisp
+(defun my/cycle-theme ()
+  (interactive)
+  (mapc #'disable-theme custom-enabled-themes)
+  (load-theme (my/get-current-theme) t)
+  (load-theme (my/get-current-theme) t)
+  
+  (message "Theme [%d/%d]: %s"
+	   (my/get-theme-index)
+	   (1- (length (my/get-themes)))
+	   (my/get-current-theme))
+
+  (my/update-theme-index))
+
+;; Ye ek bar call karna hai
+(my/cycle-theme)
+#+end_src
+
+** 4 Keybindings
+#+begin_src emacs-lisp
+(global-set-key (kbd "<f5>") #'my/cycle-theme)
+#+end_src
+
+📌 Ab *<F5>* dabane par theme cycle hoga
+
+
+
+
+
+
+
+#+begin_src emacs-lisp
+(defun my/extract-org-src-block ()
+  (let ((element (org-element-context)))
+    (unless (eq (org-element-type element) 'src-block)
+      (error "Point is not inside an Org src block"))
+
+    (let* ((lang   (org-element-property :language element))
+	   (body   (org-element-property :value element))
+	   (result (list :lang lang :body body)))
+      result)))
+
+(my/extract-org-src-block)
+#+end_src
+
+
+#+begin_src emacs-lisp :path "src" :keep t :cmd "" :run t
+
+#+end_src
+
+#+begin_src shell
+ls
+#+end_src
+
+
+
+* 📌 Function: my/shell--quotes-balanced-p
+
+👉 Purpose
+Ye function check karta hai:
+- *str* ke andar *single quotes '*
+- aur *double quotes "*
+  
+*even count me hain ya nahi*
+Agar dono balanced → ~t~
+Agar koi unbalanced → ~nil~
+
+#+begin_src emacs-lisp
+(defun my/shell--quotes-balanced-p (str)
+  "Return t if single and double quotes are balanced in STR."
+  (let ((single 0)
+        (double 0))
+    (cl-loop for c across str do
+             (cond
+              ((eq c ?') (setq single (1+ single)))
+              ((eq c ?\") (setq double (1+ double)))))
+    (and (= (% single 2) 0)
+         (= (% double 2) 0))))
+
+(my/shell--quotes-balanced-p "Hello World 'How are you'")
+(my/shell--quotes-balanced-p "Hello 'World' How' are you")
+(my/shell--quotes-balanced-p "'Hello \"World\" How' are you")
+#+end_src
+
+
+* 📌 Function: my/shell-last-command
+
+👉 Purpose
+Ye function cursor *(point)* ke pehle wali *LAST COMPLETE shell command* ko string ke form me return karta hai.
+
+Iska kaam:
+multiple commands me se sirf last
+multiline command ko ek hi command maana
+incomplete (unbalanced quotes) ko ignore karna
+
+High-level Idea:
+Cursor se peeche jaate hue newline pe newline check karo,
+jaise hi quotes balanced mil jaaye → wahi last command ka start hai.
+
+#+begin_src emacs-lisp
+(defun my/shell-last-command ()
+  "Return last shell command before point."
+  (save-excursion
+    (let ((end (point))
+          (start (point))
+          (done nil))
+      (while (and (not done)
+                  (re-search-backward "\n" nil t))
+        (let ((candidate (buffer-substring-no-properties
+                          (1+ (point)) end)))
+          (when (my/shell--quotes-balanced-p candidate)
+            (setq start (1+ (point)))
+            (setq done t))))
+      (string-trim
+       (buffer-substring-no-properties start end)))))
+#+end_src
+

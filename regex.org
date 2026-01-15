@@ -1,0 +1,173 @@
+* Regular Expressions
+
+Regex ek *powerful tool* hai text manipulation ke liye
+➡ search, replace, validation, extraction, parsing, etc.
+
+** 1 Matching Single Character
+*Dot (.) kisi bhi ek single character* ko match karta hai (newline chhod ke).
+
+#+begin_src shell
+echo -e "
+cat
+cut
+cot" | grep -P 'c.t'
+#+end_src
+
+** 2 Character Sets
+*Basic Character Set [ ]*
+
+- *[ns]* → ya to *n* ya *s*
+- *[a-zA-Z0-9_]* → sirf *ek character* jo is range me ho
+
+#+begin_src shell
+echo -e "
+cat
+sat
+bat" | grep -P '[cs]at'
+#+end_src
+
+*❌ Negated Set [^ ]*
+*[^0-9]* → koi bhi ek character match karo jo *digit nahi hai*
+
+#+begin_src shell
+echo -e "cat\nsat\nbat
+#+end_src
+
+🔹 Special Character Classes
+| *Class* | *Matlab*           |   | *Class* | *Matlab*                 |   | *Class* | *Matlab*                |
+|---------+--------------------+---+---------+--------------------------+---+---------+-------------------------|
+| *\d*    | digit *[0-9]*      |   | *\w*    | word char *[a-zA-Z0-9_]* |   | *\s*    | whitespace *[\n\r\t\v]* |
+| *\D*    | non-digit *[^0-9]* |   | *\W*    | non-word                 |   | *\S*    | non-whitespace          |
+
+#+begin_src shell
+echo -e "
+abc
+123" | grep -P '\w'
+#+end_src
+
+** 3 Repeating Matches
+| *Pattern* | *Matlab*           |   | *Pattern* | *Matlab*                |
+|-----------+--------------------+---+-----------+-------------------------|
+| ***       | 0 ya zyada matches |   | *{n}*     | exact n matches         |
+| *+*       | 1 ya zyada matches |   | *{n,m}*   | min n aur max m matches |
+| *?*       | 0 ya 1 match       |   | *{n,}*    | kam se kam n matches    |
+|           |                    |   | *{,m}*    | max m matches           |
+
+*** Greedy Matches
+**, +, {n,m} aur {n,}* ye greedy hai by default greedy ka matlab *ki ye longest possible match ko match karega*
+
+#+begin_src shell
+
+#+end_src
+
+*** Lazy Matches
+**?, +?, {n,m}? aur {n,}?* ye lazy equivalent hai greedy matches ka, lazy ka matlab *ye shortest possible match karega*
+
+#+begin_src shell
+
+#+end_src
+
+** 4 Word Boundary
+- *\b* koi pattern nahi balki ek position match karta hai word boundary *word aur non-word ke beech ka (\w-\W)*
+- *\B* match karta hai non-word boundary jo ki hai *\w-\w* aur *\W-\W* ke beech
+
+#+begin_src shell
+
+#+end_src
+
+** 5 String Boundary
+- *^* match karta hai *string ka start*
+- *$* ye match karta hai *string ka end*
+  
+#+begin_src shell
+
+#+end_src
+
+** 6 Subexpressions
+Hum apne expressions ko group kar sakte hai using *()*.
+Example ke liye hame match karna hai *HelloHello* 2 occurences of *Hello*.
+
+- Agar hum ye kare *Hello{2} toh ye match karega *Helloo*.❌
+- Isko sahi karne ka tareeka hai *(Hello){2}*.✅
+
+#+begin_src shell
+echo -e "
+Hello
+Helloo
+HelloHello" | grep -P "(Hello){2}"
+#+end_src
+
+** 7 Alteration
+Alteration *(|)* matlab "match this OR that". Ye apply hota hai *entire expression on either side unless limited by parenthesis*.
+
+- *I like cat | dog* ye match karta hai ya to *I like cat* ya phir *dog*
+- *I like (cat | dog)* ye match karta hai either *I like cat* ya phir *I like dog*
+  
+#+begin_src shell
+echo -e "
+I like cat
+I like dog
+I like bird" | grep -P "I like (cat|dog)"
+#+end_src
+
+** 8 Backreferences
+Backreference = pehle match ki hui group ko dobara use karna
+Note *group yani ye sirf subexpressions* ke saath kaam karta hai
+
+*Example:* HTML correct heading tags ko match karo
+#+begin_src shell
+echo -e "
+<h1>Correct</h1>
+<h2>Incorrect</h3>" | grep -P '<(h[1-6])>.*?<\/\1>'
+#+end_src
+
+Yaha *\1* → group 1, *\2*  second group ko and so on ...
+
+** 9 Lookaround
+*Lookahead (?=pattern) and Lookbehind (?<=pattern)*
+*Lookahead* returns matched text only if pattern exists ahead of it.
+*Lookbehind* returns matched text only if patterns exists before it.
+
+It uses *pattern* only as position marker and do not return with result.
+
+➡ match tab hi karo jab condition true ho
+➡ condition output me nahi 
+
+Ye example hai *Posiive Lookaround* ka: Match text to specify location of text to be returned
+#+begin_src shell
+
+#+end_src
+
+*** Negative Lookaround
+Looks ahead and behind for text that does not match specified pattern.
+*Negative Lookahead (?!pattern) and Negative Lookbehind (?<!pattern)*
+
+Example: Isme sirf match karna hai apple ka quantity price nahi
+
+** 10 Conditional Matching
+
+*** Conditional Processing  based on Backreferences
+*(?(backreference)true|false)*
+
+*Example*: Sare *img* tag match karo agar *img, <a>* ke andar hai to *a* ko bhi match karo
+#+begin_src shell
+
+#+end_src
+
+Breakdown of expression:
+- *(<a.*?>)?* checks if opening *a* tag exists or not we put this in subexpression
+- *(?(1)<\/a>)* here the conditional processing is working
+- we check if *?(1)* exists if subexpression *\1* exists then match closing *a* tag.
+
+*** Based on Lookaround Conditioning
+Ye based hai ki ek lookaround condition succeed haoti hai ki nahi. *(?(lookaround)true|false)*
+
+*Example*: Match karo valid zip code. *11111*, *44444-4444*.
+#+begin_src shell
+
+#+end_src
+
+Breakdown of expression:
+- *\d{5}* matches 5 digit
+- *(?=-)* looks ahead for *-*
+- *(?(?=-)-\d{4})* if *-* occurs after *\d{5}* then loo for *-\d{4}*

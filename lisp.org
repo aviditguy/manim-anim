@@ -1,0 +1,377 @@
+* Lisp
+
+** Conditinals
+- *if* sirf if-else karta hai.
+- *cond* if-elseif branch hai multiple if condition ke liye
+- *when = (if true then)*
+- *unless = (if not true then)*
+#+begin_src emacs-lisp
+(setq x 10)
+
+(if (> x 3)
+    'yes
+  'no)
+
+(when (> x 5)
+  "big")
+
+(when (> x 5)
+  (progn
+    (print "multiple statements")
+    (print "using progn")
+    (print "return last statement")
+    "big"))
+
+(unless (= x 0)
+  (/ 10 x))
+
+(cond
+ ((< x 0) 'negative)
+ ((> x 0) 'positive)
+ (t 'zero))
+#+end_src
+
+*case* value based comparison karta hai ye *Common Lisp me hai Emacs me nahi*.
+#+begin_src lisp
+(defparameter *day* 'wednesday)
+
+(case *day*
+      (1 'monday)
+      (2 'tuesday)
+      (otherwise 'wrong))
+#+end_src
+
+** Loops
+- *(dotimes (var count [result] body...)*
+  - loop karega *0 >= var < count*
+  - return karega *result* or *nil*
+#+begin_src emacs-lisp
+(dotimes (i 5 i)
+  (print i))
+
+(dolist (x '(a b c))
+  (print x))
+#+end_src
+
+*do* loop sirf *Common Lisp me hai*, ye primitive *low-level loop* hai.	
+*do* ka general syntax	
+#+begin_src
+(do ( (var init step)
+      (var2 init2 step2)
+      ... )
+    (end-test result)
+  body-forms...)
+#+end_src
+
+*Example:*
+#+begin_src lisp
+;; i=0 se chale aur har loop me +1 ho
+;; loop kab rukega when i == 5 aur return i
+(do ((i 0 (1+ i)))
+    ((= i 5) i)
+  (print i))
+
+;; i=0 aur +1 and j=10 aur -1
+;; loop ruke when i > j and return (list i j)
+;; aur har loop me print karo
+(do ((i 0 (1+ i))
+     (j 10 (1- j)))
+    ((> i j) (list i j))
+  (format t "~a ~a~%" i j))
+#+end_src
+
+** loop macro (powerful)
+- *do* ke aage (body...) aati hai
+- *do* → sideaffects
+  
+#+begin_src lisp
+(loop for i from 1 to 10 do (print i))
+(loop for i from 1 below 10 do (print i))
+(loop for i from 10 downto 0 do (print i))
+(loop for i from 1 to 10 by 2 do (print i))
+
+;; repeat - karta hai 5 baar
+(loop repeat 5 do (print "Hello"))
+;; repeat + index
+(loop repeat 5
+      for i from 0
+      do (format t "i = ~a Hello~%" i))
+
+;; while - Jab tak condition true hai tab tak loop
+(let ((i 0))
+  (loop while (< i 5)
+	do (print i) (incf i)))
+;; List empty hone tak pop karna
+(let ((lst '(a b c d)))
+  (loop while lst do (print (pop lst))))
+
+;; until - Jab tak condition false hai tab tak loop
+(let ((i 0))
+  (loop until (= i 5)
+	do (print i) (incf i)))
+#+end_src
+
+- *collect / append / sum / count / maximize / minimize* → return value
+- *collect* – list banana
+- *append* – list ko jodna (flatten list)
+- *sum* – numbers ka total
+- *count* –  kitni baar condition true hui
+- *maximize, minimize* – max aur min value
+  
+#+begin_src lisp
+;; collect
+(loop for i from 1 to 10 collect i)
+
+(loop for i from 1 to 10
+      when (evenp i) collect i)
+
+(loop for i from 1 to 10
+      if (oddp i) collect i
+      else collect (* i 10))
+
+;; loop over vectors/strings
+(loop for ch across "hello" collect ch)
+
+;; append
+(loop for x in '((1 2) (3 4) (5)) append x)
+
+;; sum
+(loop for i from 1 to 10 sum i)
+(loop for i from 1 to 10 when (oddp i) sum i)
+
+;; count
+(loop for i from 1 to 10 count (evenp i))
+(loop for x in '(a b a c a) count (eq x 'a))
+
+;; maximize
+(loop for x in '(3 10 7 2) maximize x)
+(loop for i from 1 to 10 maximize (* i i))
+;; minimize
+(loop for x in '(3 10 7 2) minimize x)
+#+end_src
+
+- by default *accumulator → return* par *accumulate into → named variable* me jama karo
+- return manually *finally* me karna padta hai
+#+begin_src lisp
+(loop for i from 1 to 10
+      for sq = (* i i)
+
+      collect sq into squares        ; list accumulator
+      sum sq into total-sum          ; numeric accumulator
+      count (evenp i) into even-cnt  ; counting
+      maximize sq into max-square    ; max value
+
+      finally
+        (return
+          (list
+            :squares squares
+            :sum total-sum
+            :even-count even-cnt
+            :max-square max-square)))
+#+end_src
+
+** Symbol kya hota hai?
+- *Symbol = naam + identity + multiple bindings ka container*
+- *Symbol string nahi, variable nahi, balki runtime object hai*.
+
+#+begin_src lisp
+(symbolp 'x)
+(symbolp "x")
+#+end_src
+*'x* = SYMBOL and *"x"* = STRING
+
+*** Symbol ke andar kya-kya hota hai
+Conceptually
+#+begin_src
+SYMBOL X
+ ├─ name           → "X"
+ ├─ value-cell     → 10 (variable value)
+ ├─ function-cell  → #<FUNCTION ...> (function binding)
+ ├─ plist          → (:DOC "..." :TYPE INTEGER (property list)
+ └─ package        → CL-USER
+#+end_src
+Sab runtime pe inspectable hai.
+
+- *Symbol ka NAME*
+  - uppercase kyun? → reader default uppercase karta hai
+  - case-insensitive language (by default)
+- *Symbol ka PACKAGE*
+  - Matlab: *x* kis namespace me belong karta hai
+    
+#+begin_src lisp
+(symbol-name 'x)
+(symbol-package 'x)
+#+end_src
+
+- *Symbol ka VALUE cell (variable binding)*
+  - *boundp* check karta hai ki SYMBOL ke pass currently koi VALUE binding hai ya nahi
+    
+#+begin_src lisp
+(defparameter *x* 10)
+(symbol-value '*x*)
+(boundp '*x*)
+
+;; Unbound karne ke liye
+(makunbound '*x*)
+(boundp '*x*)
+#+end_src
+⚠️ Lexical variables ka yeh cell use hi nahi hota.
+
+- *Function cell*
+  - *Har symbol ke paas ek alag jagah hoti hai jahan uska FUNCTION binding store hota hai — isi ko function cell kehte hain*.
+
+#+begin_src lisp
+(defparameter *x* 10)
+(fboundp '*x*)
+
+(defun x () 42)
+(fboundp 'x)
+(symbol-function'x)
+#+end_src
+
+Ek example jahan hum khud symbol ka function cell set karenge
+
+#+begin_src lisp
+(defun x () 50)
+(defparameter *x* 10)
+
+(setf (symbol-function '*x*) #'x)
+*x*
+(*x*)
+#+end_src
+
+- *Property list (PLIST)*
+  - Symbol ke saath metadata
+  - Use cases:
+    - documentation
+    - annotations
+    - DSL metadata
+
+#+begin_src lisp
+(symbol-plist 'x)
+(setf (symbol-plist 'x) '(:a 1 :b 2))
+(symbol-plist 'x)
+#+end_src
+
+*** Symbol ka lifecycle (interning)
+Reader jab *x* padhta hai:
+- current package dekhta hai
+- *"X"* naam ka symbol hai?
+- hai → wahi symbol use
+- nahi → naya symbol create + intern
+
+*Interned symbol* = jo kisi *package ke symbol table* me registered ho
+*Uninterned symbol* = jo kisi package me registered nahi ho
+
+
+
+
+** *'x* vs *:x* in Symbols
+| *Form* | *Kya hai*      | *Package*                           | *Same symbol baar-baar?*          |
+|--------+----------------+-------------------------------------+-----------------------------------|
+| *'x*   | Normal symbol  | current package (usually *CL_USER*) | ✅ haan                           |
+| *:x*   | Keyword symbol | *KEYWORD* package                   | ✅ haan (global, self-evaluating) |
+
+*Symbol ka anatomy yaad rakho*
+Har *symbol ke paas hota hai:
+#+begin_src
+SYMBOL
+ ├─ name        ; "X"
+ ├─ package     ; CL-USER / KEYWORD / nil
+ ├─ value cell  ; variable value
+ ├─ function cell ; function binding
+ ├─ plist       ; property list
+#+end_src
+
+#+begin_src lisp
+(symbol-package 'x)
+(symbol-package :x)
+
+;; 'x ka matlab bas (quote x)
+(eq 'x (quote x))
+#+end_src
+
+
+
+
+** Variables in Lisp
+*** defparameter, defvar and defconstant
+1. *defparameter* → *hamesha overwrite karta hai*, initialization forcefully hoti hai
+2. *defvar*       → *sirf pehli baar set hota hai*, agar variable already bound hai → ignore
+3. *defconstant*  → should *never change*, compiler may inline it
+  
+#+begin_src lisp
+(defparameter *count* 10)
+(defparameter *count* 20)
+
+(defvar *flag* t)
+(defvar *flag* nil)
+
+(defconstant +pi+ 3.14159)
+#+end_src
+
+📌 Rule of thumb
+- config / resettable   → *defparameter*
+- state / once-only     → *defvar*
+- ⚠️ Redefining constant → *undefined behavior*
+
+*** Local variables
+*let* me *sab bindings parallel* hote hai.
+*let** *sequence binding*
+
+#+begin_src lisp
+(let ((x 10)
+      (y 20))
+  (+ x y))
+
+(let* ((x 10)
+       (y (+ x 5)))
+  y)
+#+end_src
+
+*Variable lifetime & scope*
+#+begin_src lisp
+(let ((x 10))
+  (print x))
+(print x) ; ❌ unbound
+#+end_src
+
+👉 Local variables *scope ke bahar exist nahi karte*.
+
+*** Special (Dynamic) variables
+#+begin_src lisp
+(defparameter *mode* :debug)
+
+(defun test ()
+  (print *mode*))
+
+(let ((*mode* :release))
+  (test))
+
+(test)
+#+end_src
+
+👉 *Dynamic scope* = runtime lookup
+
+*** setq and setf
+*setq — simple assignment = sirf variable ko value do*
+*setf — generalized assignment = kisi bhi "place" ko value do*
+
+*** Multiple values & variables
+#+begin_src lisp
+(defun div-mod (a b)
+  (values (floor a b) (mod a b)))
+
+(multiple-value-bind (q r) (div-mod 10 3)
+		     (list q r))
+#+end_src
+
+*** Destructuring variables
+#+begin_src lisp
+(destructuring-bind (a b c) '(1 2 3)
+		    (+ a b c))
+
+(destructuring-bind ((x y) z) '((1 2) 3)
+		    (+ x y z))
+#+end_src
+
